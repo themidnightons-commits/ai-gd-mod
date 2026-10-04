@@ -5,7 +5,6 @@ set(CMAKE_CXX_STANDARD 20)
 
 include($ENV{GEODE_SDK}/cmake/GeodeFile.cmake)
 
-setup_geode_mod(
-    ${PROJECT_NAME}
-    src/main.cpp
-)
+add_library(${PROJECT_NAME} SHARED src/main.cpp)
+
+setup_geode_mod(${PROJECT_NAME})
