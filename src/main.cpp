@@ -13,8 +13,11 @@ protected:
     TextInput* m_input = nullptr;
     EditorUI* m_editorUI = nullptr;
 
-    bool setup() override {
-        auto winSize = CCDirector::sharedDirector()->getWinSize();
+    bool init(EditorUI* ui) {
+        m_editorUI = ui;
+
+        if (!Popup::init(400.f, 220.f)) return false;
+
         this->setTitle("Groq AI Level Builder");
 
         m_input = TextInput::create(300.0f, "Masukkan prompt level...");
@@ -59,8 +62,7 @@ protected:
 public:
     static AIPopup* create(EditorUI* ui) {
         auto ret = new AIPopup();
-        ret->m_editorUI = ui;
-        if (ret->init(400.f, 220.f)) {
+        if (ret->init(ui)) {
             ret->autorelease();
             return ret;
         }
