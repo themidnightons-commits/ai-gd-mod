@@ -2,12 +2,13 @@
 #include <Geode/modify/EditorUI.hpp>
 #include <Geode/utils/web.hpp>
 #include <Geode/ui/TextInput.hpp>
+#include <Geode/ui/Popup.hpp>
 #include <Geode/binding/GameObject.hpp>
 #include <vector>
 
 using namespace geode::prelude;
 
-class AIPopup : public geode::Popup<> {
+class AIPopup : public Popup {
 protected:
     TextInput* m_input = nullptr;
     EditorUI* m_editorUI = nullptr;
@@ -17,7 +18,7 @@ protected:
         this->setTitle("Groq AI Level Builder");
 
         m_input = TextInput::create(300.0f, "Masukkan prompt level...");
-        m_input->setPosition({winSize.width / 2, winSize.height / 2 + 20.f});
+        m_input->setPosition({0.f, 20.f});
         m_mainLayer->addChild(m_input);
 
         auto btnSpr = ButtonSprite::create("Generate");
@@ -59,11 +60,11 @@ public:
     static AIPopup* create(EditorUI* ui) {
         auto ret = new AIPopup();
         ret->m_editorUI = ui;
-        if (ret && ret->initAnchored(400.f, 220.f)) {
+        if (ret->init(400.f, 220.f)) {
             ret->autorelease();
             return ret;
         }
-        CC_SAFE_DELETE(ret);
+        delete ret;
         return nullptr;
     }
 
@@ -76,7 +77,6 @@ public:
 
         Notification::create("Menganalisis lagu & membuat level...", NotificationIcon::Loading)->show();
 
-        // GANTI API KEY INI NANTI (jangan hardcode di production)
         std::string apiKey = "Gsk_Lfna4DvXz9GFGCZRm46PWGdyb3FYDHxNrXkMnFooCkbnKY3c6wRw";
         std::string url = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -86,23 +86,22 @@ public:
             "User prompt: '" + prompt + "'. "
             "Balas HANYA dengan JSON array: [{\"id\": 1, \"x\": 15.0, \"y\": 15.0}]. Jangan pakai markdown.";
 
-        matjson::Value body = matjson::Object{
+        matjson::Value body = matjson::makeObject({
             {"model", "llama-3.3-70b-versatile"},
             {"temperature", 0.3},
-            {"messages", matjson::Array{
-                matjson::Object{
+            {"messages", matjson::Value(std::vector<matjson::Value>{
+                matjson::makeObject({
                     {"role", "system"},
                     {"content", systemPrompt}
-                }
-            }}
-        };
+                })
+            })}
+        });
 
         auto req = web::WebRequest();
         req.header("Content-Type", "application/json");
         req.header("Authorization", "Bearer " + apiKey);
         req.bodyJSON(body);
 
-        // Simpan pointer editorUI supaya aman di callback
         auto editorUI = m_editorUI;
 
         async::spawn(
@@ -130,7 +129,10 @@ public:
                     }
 
                     int objectCount = 0;
-                    for (auto const& item : levelData.unwrap().asArray().unwrap()) {
+                    auto arr = levelData.unwrap().asArray();
+                    if (!arr) return;
+
+                    for (auto const& item : arr.unwrap()) {
                         int id = item["id"].asInt().unwrapOr(1);
                         float x = static_cast<float>(item["x"].asDouble().unwrapOr(0.0));
                         float y = static_cast<float>(item["y"].asDouble().unwrapOr(0.0));
