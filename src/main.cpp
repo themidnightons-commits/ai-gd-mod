@@ -74,12 +74,18 @@ public:
         std::string prompt = m_input->getString();
         if (prompt.empty()) return;
 
+        // Mengambil API Key dari Setting Mod (Aman & Tidak Hardcoded)
+        std::string apiKey = Mod::get()->getSettingValue<std::string>("groq-api-key");
+        if (apiKey.empty()) {
+            Notification::create("Isi Groq API Key di Setting Mod!", NotificationIcon::Error)->show();
+            return;
+        }
+
         std::string songInfo = getCurrentSongInfo();
         this->onClose(nullptr);
 
         Notification::create("Menganalisis lagu & membuat level...", NotificationIcon::Loading)->show();
 
-        std::string apiKey = "Gsk_Lfna4DvXz9GFGCZRm46PWGdyb3FYDHxNrXkMnFooCkbnKY3c6wRw";
         std::string url = "https://api.groq.com/openai/v1/chat/completions";
 
         std::string systemPrompt =
