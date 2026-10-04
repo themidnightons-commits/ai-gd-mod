@@ -1,6 +1,11 @@
 {
   "geode": "~5.0.0",
-  "gd": "*",
+  "gd": {
+    "win": "*",
+    "mac": "*",
+    "android": "*",
+    "ios": "*"
+  },
   "id": "themidnights.groq_ai_builder",
   "name": "Groq AI Builder",
   "version": "v1.0.0",
