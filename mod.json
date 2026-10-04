@@ -1,22 +1,13 @@
 {
-  "geode": "5.10.1",
-  "gd": {
-    "win": "2.2081",
-    "mac": "2.2081",
-    "android": "2.2081",
-    "ios": "2.2081"
-  },
-  "id": "themidnights.groq_ai_builder",
-  "name": "Groq AI Builder",
-  "version": "v1.0.0",
-  "developer": "themidnights",
-  "description": "Mod pembuat level otomatis menggunakan AI Groq",
-  "settings": {
-    "groq-api-key": {
-      "name": "Groq API Key",
-      "description": "Masukkan API Key Groq kamu di sini",
-      "type": "string",
-      "default": ""
-    }
-  }
+"geode": "5.10.1",
+"gd": { "win": "2.2081", "android": "2.2081", "mac": "2.2081" },
+"id": "themidnights.groq_ai_builder",
+"name": "Groq AI Level Builder",
+"version": "v1.0.0",
+"developer": "themidnights",
+"description": "Bikin layout level Geometry Dash dari prompt memakai Groq AI.",
+"settings": {
+"api-key": { "type": "string", "name": "Groq API Key", "default": "" },
+"model": { "type": "string", "name": "Model", "default": "llama-3.3-70b-versatile" }
+}
 }

@@ -1,0 +1,73 @@
+{
+  "level": {
+    "name": "MyLevel",
+    "author": "You",
+    "difficulty": "Easy",
+    "length": "Short",
+    "version": "1.0",
+    "spawn": {
+      "x": 110,
+      "y": 220
+    },
+    "background": {
+      "theme": "default",
+      "color_top": "#1E1B4B",
+      "color_bottom": "#312E81"
+    },
+    "objects": [
+      {
+        "id": 1,
+        "type": "solid_block",
+        "x": 80,
+        "y": 280,
+        "w": 150,
+        "h": 30
+      },
+      {
+        "id": 2,
+        "type": "solid_block",
+        "x": 260,
+        "y": 260,
+        "w": 140,
+        "h": 30
+      },
+      {
+        "id": 3,
+        "type": "solid_block",
+        "x": 430,
+        "y": 240,
+        "w": 140,
+        "h": 30
+      },
+      {
+        "id": 4,
+        "type": "solid_block",
+        "x": 610,
+        "y": 220,
+        "w": 140,
+        "h": 30
+      },
+      {
+        "id": 5,
+        "type": "orb",
+        "x": 340,
+        "y": 180,
+        "kind": "jump"
+      },
+      {
+        "id": 6,
+        "type": "orb",
+        "x": 520,
+        "y": 160,
+        "kind": "jump"
+      },
+      {
+        "id": 7,
+        "type": "portal",
+        "x": 760,
+        "y": 170,
+        "kind": "cube"
+      }
+    ]
+  }
+}
