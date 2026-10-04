@@ -5,25 +5,25 @@
 #include <Geode/ui/Popup.hpp>
 #include <Geode/binding/GameObject.hpp>
 #include <vector>
+#include <string>
 
 using namespace geode::prelude;
 
-class AIPopup : public Popup {
+class AIPopup : public Popup<EditorUI*> {
 protected:
     TextInput* m_input = nullptr;
     EditorUI* m_editorUI = nullptr;
 
-    bool init(EditorUI* ui) {
+    bool setup(EditorUI* ui) override {
         m_editorUI = ui;
-
-        if (!Popup::init(400.f, 220.f)) return false;
-
         this->setTitle("Groq AI Level Builder");
 
+        // Input Prompt
         m_input = TextInput::create(300.0f, "Masukkan prompt level...");
         m_input->setPosition({0.f, 20.f});
         m_mainLayer->addChild(m_input);
 
+        // Tombol Generate
         auto btnSpr = ButtonSprite::create("Generate");
         auto btn = CCMenuItemSpriteExtra::create(btnSpr, this, menu_selector(AIPopup::onGenerate));
         btn->setPosition({0.f, -60.f});
@@ -62,22 +62,25 @@ protected:
 public:
     static AIPopup* create(EditorUI* ui) {
         auto ret = new AIPopup();
-        if (ret->init(ui)) {
+        if (ret && ret->initAnchored(400.f, 220.f, ui)) {
             ret->autorelease();
             return ret;
         }
-        delete ret;
+        CC_SAFE_DELETE(ret);
         return nullptr;
     }
 
     void onGenerate(CCObject*) {
         std::string prompt = m_input->getString();
-        if (prompt.empty()) return;
+        if (prompt.empty()) {
+            Notification::create("Prompt tidak boleh kosong!", NotificationIcon::Warning)->show();
+            return;
+        }
 
-        // Mengambil API Key dari Setting Mod (Aman & Tidak Hardcoded)
+        // Ambil Groq API Key dari Setting Mod yang diisi user
         std::string apiKey = Mod::get()->getSettingValue<std::string>("groq-api-key");
         if (apiKey.empty()) {
-            Notification::create("Isi Groq API Key di Setting Mod!", NotificationIcon::Error)->show();
+            FLAlertLayer::create("Error", "Isi Groq API Key di Setting Mod terlebih dahulu!", "OK")->show();
             return;
         }
 
@@ -87,12 +90,11 @@ public:
         Notification::create("Menganalisis lagu & membuat level...", NotificationIcon::Loading)->show();
 
         std::string url = "https://api.groq.com/openai/v1/chat/completions";
-
         std::string systemPrompt =
             "Kamu adalah bot pembuat level Geometry Dash. "
             "Lagu saat ini: " + songInfo + ". "
             "User prompt: '" + prompt + "'. "
-            "Balas HANYA dengan JSON array: [{\"id\": 1, \"x\": 15.0, \"y\": 15.0}]. Jangan pakai markdown.";
+            "Balas HANYA dengan JSON array objek: [{\"id\": 1, \"x\": 15.0, \"y\": 15.0}]. Tanpa penjelasan atau markdown.";
 
         matjson::Value body = matjson::makeObject({
             {"model", "llama-3.3-70b-versatile"},
@@ -116,13 +118,13 @@ public:
             req.post(url),
             [editorUI](web::WebResponse response) {
                 if (!response.ok()) {
-                    Notification::create("Gagal terhubung ke Groq", NotificationIcon::Error)->show();
+                    Notification::create("Gagal terhubung ke Groq API", NotificationIcon::Error)->show();
                     return;
                 }
 
                 auto res = response.json();
                 if (!res) {
-                    Notification::create("Response tidak valid", NotificationIcon::Error)->show();
+                    Notification::create("Response dari Groq tidak valid", NotificationIcon::Error)->show();
                     return;
                 }
 
@@ -155,10 +157,10 @@ public:
                         }
                     }
 
-                    Notification::create(std::to_string(objectCount) + " objek dipasang!", NotificationIcon::Success)->show();
+                    Notification::create(std::to_string(objectCount) + " objek berhasil dipasang!", NotificationIcon::Success)->show();
                 }
                 catch (...) {
-                    Notification::create("Gagal membaca hasil AI", NotificationIcon::Error)->show();
+                    Notification::create("Gagal memproses struktur level dari AI", NotificationIcon::Error)->show();
                 }
             }
         );
@@ -181,6 +183,8 @@ class $modify(MyEditorUI, EditorUI) {
     }
 
     void onAIBtn(CCObject*) {
-        AIPopup::create(this)->show();
+        if (auto popup = AIPopup::create(this)) {
+            popup->show();
+        }
     }
 };

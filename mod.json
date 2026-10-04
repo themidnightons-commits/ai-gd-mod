@@ -1,5 +1,6 @@
 {
   "geode": "~5.0.0",
+  "gd": "*",
   "id": "themidnights.groq_ai_builder",
   "name": "Groq AI Builder",
   "version": "v1.0.0",
@@ -8,7 +9,7 @@
   "settings": {
     "groq-api-key": {
       "name": "Groq API Key",
-      "description": "kaboomi",
+      "description": "Masukkan API Key Groq kamu di sini",
       "type": "string",
       "default": ""
     }
