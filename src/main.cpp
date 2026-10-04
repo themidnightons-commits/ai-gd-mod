@@ -2,28 +2,29 @@
 #include <Geode/modify/EditorUI.hpp>
 #include <Geode/utils/web.hpp>
 #include <Geode/ui/TextInput.hpp>
+#include <Geode/binding/GameObject.hpp>
 #include <vector>
 
 using namespace geode::prelude;
 
 class AIPopup : public geode::Popup<> {
 protected:
-    TextInput* m_input;
-    EditorUI* m_editorUI;
+    TextInput* m_input = nullptr;
+    EditorUI* m_editorUI = nullptr;
 
     bool setup() override {
         auto winSize = CCDirector::sharedDirector()->getWinSize();
         this->setTitle("Groq AI Level Builder");
 
-        m_input = TextInput::create(300.0f, "Contoh: 'buatkan rintangan untuk lagu ini'...");
-        m_input->setPosition(winSize / 2);
+        m_input = TextInput::create(300.0f, "Masukkan prompt level...");
+        m_input->setPosition({winSize.width / 2, winSize.height / 2 + 20.f});
         m_mainLayer->addChild(m_input);
 
         auto btnSpr = ButtonSprite::create("Generate");
         auto btn = CCMenuItemSpriteExtra::create(btnSpr, this, menu_selector(AIPopup::onGenerate));
-        btn->setPosition({winSize.width / 2, winSize.height / 2 - 60.0f});
-
+        btn->setPosition({0.f, -60.f});
         m_buttonMenu->addChild(btn);
+
         return true;
     }
 
@@ -33,21 +34,21 @@ protected:
         }
 
         auto level = m_editorUI->m_editorLayer->m_level;
-        
+
         if (level->m_songID > 0) {
             return "Custom Song (Newgrounds ID: " + std::to_string(level->m_songID) + ")";
-        } 
-        
+        }
+
         int track = level->m_audioTrack;
-        std::vector<std::string> officialSongs = {
-            "Stereo Madness", "Back On Track", "Polargeist", "Dry Out", "Base After Base", 
-            "Cant Let Go", "Jumper", "Time Machine", "Cycles", "xStep", "Clutterfunk", 
-            "Theory of Everything", "Electroman Adventures", "Clubstep", "Electrodynamix", 
-            "Hexagon Force", "Blast Processing", "Theory of Everything 2", "Geometrical Dominator", 
+        static const std::vector<std::string> officialSongs = {
+            "Stereo Madness", "Back On Track", "Polargeist", "Dry Out", "Base After Base",
+            "Cant Let Go", "Jumper", "Time Machine", "Cycles", "xStep", "Clutterfunk",
+            "Theory of Everything", "Electroman Adventures", "Clubstep", "Electrodynamix",
+            "Hexagon Force", "Blast Processing", "Theory of Everything 2", "Geometrical Dominator",
             "Deadlocked", "Fingerdash", "Dash", "Explorers"
         };
 
-        if (track >= 0 && track < officialSongs.size()) {
+        if (track >= 0 && track < static_cast<int>(officialSongs.size())) {
             return "Official Song: " + officialSongs[track];
         }
 
@@ -71,66 +72,86 @@ public:
         if (prompt.empty()) return;
 
         std::string songInfo = getCurrentSongInfo();
-
         this->onClose(nullptr);
+
         Notification::create("Menganalisis lagu & membuat level...", NotificationIcon::Loading)->show();
 
-        std::string apiKey = "Gsk_Lfna4DvXz9GFGCZRm46PWGdyb3FYDHxNrXkMnFooCkbnKY3c6wRw"; 
+        // GANTI API KEY INI NANTI (jangan hardcode di production)
+        std::string apiKey = "Gsk_Lfna4DvXz9GFGCZRm46PWGdyb3FYDHxNrXkMnFooCkbnKY3c6wRw";
         std::string url = "https://api.groq.com/openai/v1/chat/completions";
 
-        std::string systemPrompt = "Kamu adalah bot pembuat level Geometry Dash. "
-                                   "Lagu yang saat ini diputar di level adalah: " + songInfo + ". "
-                                   "Berdasarkan prompt user: '" + prompt + "', balas HANYA dengan JSON array berisi objek. "
-                                   "Sesuaikan vibe atau gaya rintangan dengan lagu tersebut jika relevan. "
-                                   "Jangan tambahkan teks lain atau markdown (```json). "
-                                   "Struktur harus: [{\"id\": 1, \"x\": 15.0, \"y\": 15.0}]. Objek GD: 1=balok, 8=duri, 10=portal.";
+        std::string systemPrompt =
+            "Kamu adalah bot pembuat level Geometry Dash. "
+            "Lagu saat ini: " + songInfo + ". "
+            "User prompt: '" + prompt + "'. "
+            "Balas HANYA dengan JSON array: [{\"id\": 1, \"x\": 15.0, \"y\": 15.0}]. Jangan pakai markdown.";
 
-        auto jsonBody = matjson::makeObject({
+        matjson::Value body = matjson::Object{
             {"model", "llama-3.3-70b-versatile"},
-            {"messages", matjson::makeArray({
-                matjson::makeObject({
+            {"temperature", 0.3},
+            {"messages", matjson::Array{
+                matjson::Object{
                     {"role", "system"},
                     {"content", systemPrompt}
-                })
-            })},
-            {"temperature", 0.3}
-        });
+                }
+            }}
+        };
 
-        web::AsyncWebRequest()
-            .header("Content-Type", "application/json")
-            .header("Authorization", "Bearer " + apiKey)
-            .bodyRaw(jsonBody.dump(matjson::NO_INDENTATION))
-            .post(url)
-            .text()
-            .then([this](std::string const& response) {
+        auto req = web::WebRequest();
+        req.header("Content-Type", "application/json");
+        req.header("Authorization", "Bearer " + apiKey);
+        req.bodyJSON(body);
+
+        // Simpan pointer editorUI supaya aman di callback
+        auto editorUI = m_editorUI;
+
+        async::spawn(
+            req.post(url),
+            [editorUI](web::WebResponse response) {
+                if (!response.ok()) {
+                    Notification::create("Gagal terhubung ke Groq", NotificationIcon::Error)->show();
+                    return;
+                }
+
+                auto res = response.json();
+                if (!res) {
+                    Notification::create("Response tidak valid", NotificationIcon::Error)->show();
+                    return;
+                }
+
                 try {
-                    auto fullResponse = matjson::parse(response);
-                    std::string aiText = fullResponse["choices"][0]["message"]["content"].as_string();
-                    
+                    auto& json = res.unwrap();
+                    std::string aiText = json["choices"][0]["message"]["content"].asString().unwrapOr("");
+
                     auto levelData = matjson::parse(aiText);
+                    if (!levelData) {
+                        Notification::create("AI tidak mengembalikan JSON valid", NotificationIcon::Error)->show();
+                        return;
+                    }
+
                     int objectCount = 0;
+                    for (auto const& item : levelData.unwrap().asArray().unwrap()) {
+                        int id = item["id"].asInt().unwrapOr(1);
+                        float x = static_cast<float>(item["x"].asDouble().unwrapOr(0.0));
+                        float y = static_cast<float>(item["y"].asDouble().unwrapOr(0.0));
 
-                    for (auto const& item : levelData.as_array()) {
-                        int id = item["id"].as_int();
-                        float x = static_cast<float>(item["x"].as_double());
-                        float y = static_cast<float>(item["y"].as_double());
-
-                        GameObject* obj = GameObject::createWithKey(id);
-                        if (obj) {
+                        if (auto obj = GameObject::createWithKey(id)) {
                             obj->setPosition({x, y});
-                            m_editorUI->m_editorLayer->m_objectLayer->addChild(obj);
-                            m_editorUI->m_editorLayer->m_objects->addObject(obj);
-                            objectCount++;
+                            if (editorUI && editorUI->m_editorLayer) {
+                                editorUI->m_editorLayer->m_objectLayer->addChild(obj);
+                                editorUI->m_editorLayer->m_objects->addObject(obj);
+                                objectCount++;
+                            }
                         }
                     }
-                    Notification::create(std::to_string(objectCount) + " objek berhasil dipasang!", NotificationIcon::Success)->show();
-                } catch (std::exception& e) {
-                    Notification::create("Gagal membaca desain dari AI", NotificationIcon::Error)->show();
+
+                    Notification::create(std::to_string(objectCount) + " objek dipasang!", NotificationIcon::Success)->show();
                 }
-            })
-            .expect([](std::string const& error) {
-                Notification::create("Gagal terhubung ke Groq", NotificationIcon::Error)->show();
-            });
+                catch (...) {
+                    Notification::create("Gagal membaca hasil AI", NotificationIcon::Error)->show();
+                }
+            }
+        );
     }
 };
 
@@ -140,11 +161,10 @@ class $modify(MyEditorUI, EditorUI) {
 
         auto btnSpr = CCSprite::createWithSpriteFrameName("GJ_chatBtn_001.png");
         auto btn = CCMenuItemSpriteExtra::create(btnSpr, this, menu_selector(MyEditorUI::onAIBtn));
-        
+
         auto menu = CCMenu::create();
-        menu->setPosition({ 25.0f, 100.0f });
+        menu->setPosition({25.0f, 100.0f});
         menu->addChild(btn);
-        
         this->addChild(menu);
 
         return true;
