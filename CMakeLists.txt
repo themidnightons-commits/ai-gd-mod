@@ -5,9 +5,9 @@ project(GroqAIBuilder VERSION 1.0.0)
 
 include($ENV{GEODE_SDK}/cmake/GeodeFile.cmake)
 
-setup_geode_mod(${PROJECT_NAME})
-
 add_geode_mod(
-    ${PROJECT_NAME}
+    GroqAIBuilder
     src/main.cpp
 )
+
+setup_geode_mod(GroqAIBuilder)
