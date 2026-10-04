@@ -1,14 +1,16 @@
 {
-"geode": "5.0.0",
-"gd": {
-"win": "2.2081",
-"android": "2.2081",
-"mac": "2.2081",
-"ios": "2.2081"
-},
-"id": "themidnights.groq_ai_builder",
-"name": "Groq AI Level Builder",
-"version": "1.0.0",
-"developer": "themidnights",
-"description": "Mod pembuat level Geometry Dash otomatis menggunakan Groq AI berbasis lagu."
+  "geode": "~5.0.0",
+  "id": "themidnights.groq_ai_builder",
+  "name": "Groq AI Builder",
+  "version": "v1.0.0",
+  "developer": "themidnights",
+  "description": "Mod pembuat level otomatis menggunakan AI Groq",
+  "settings": {
+    "groq-api-key": {
+      "name": "Groq API Key",
+      "description": "kaboomi",
+      "type": "string",
+      "default": ""
+    }
+  }
 }
